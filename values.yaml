@@ -1,0 +1,167 @@
+karpenter:
+  nameOverride: "karpenter"
+  fullnameOverride: "karpenter"
+  additionalLabels: {}
+  additionalAnnotations: {}
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  serviceAccount:
+    create: true
+    name: ""
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::XXXXXXXXXX:role/karpenter-controller
+  serviceMonitor:
+    enabled: false
+    additionalLabels: {}
+    endpointConfig: {}
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+  podLabels: {}
+  podAnnotations: {}
+  podDisruptionBudget:
+    name: karpenter
+    maxUnavailable: 1
+  podSecurityContext:
+    fsGroup: 1000
+  priorityClassName: system-cluster-critical
+  terminationGracePeriodSeconds:
+  hostNetwork: false
+  dnsPolicy: Default
+  dnsConfig: {}
+  nodeSelector: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: karpenter.sh/provisioner-name
+                operator: DoesNotExist
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+  extraVolumes: []
+
+  controller:
+    securityContext: {}
+    env: []
+    resources:
+      requests:
+        cpu: 1
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 1Gi
+    logLevel: ""
+    logEncoding: ""
+    extraVolumeMounts: []
+    batchMaxDuration: 10s
+    batchIdleDuration: 1s
+
+  webhook:
+    securityContext: {}
+    port: 8443
+    env:
+      - name: AWS_REGION
+        value: eu-west-1
+    resources:
+      requests:
+        cpu: 200m
+        memory: 100Mi
+      limits:
+        cpu: 200m
+        memory: 100Mi
+    logLevel: ""
+    logEncoding: ""
+    extraVolumeMounts: []
+  logLevel: info
+  logEncoding: console
+  clusterName: main_cluster
+  clusterEndpoint: https://XXXXXXXXXXXXXXXXXXXXXXXX.gr7.eu-west-1.eks.amazonaws.com
+  aws:
+    defaultInstanceProfile: KarpenterNodeInstanceProfile
+
+providers:
+  items:
+    - name: spot
+      providerRef:
+        name: bottlerocket
+      limits:
+        resources:
+          cpu: 10
+      labels:
+        ManagedBy: karpenter
+      requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+            - m6a.large
+            - m6i.large
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+            - spot
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values:
+            - eu-west-1a
+            - eu-west-1b
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+            - amd64
+      taints: []
+        # - effect: NoSchedule
+        #   key: 
+        #   value: "true"
+      ttlSecondsAfterEmpty: 30
+
+awsNodeTemplate:
+  items:
+    - name: bottlerocket
+      # instanceProfile: ""
+      amiFamily: Bottlerocket
+      # amiSelector: 
+      #   Name: bottlerocket
+      subnetSelector:
+        karpenter.sh/discovery: main_cluster
+      securityGroupSelector:
+        karpenter.sh/discovery: main_cluster
+      userData: |
+        [settings.host-containers.admin]
+        enabled = true
+
+        [settings.host-containers.control]
+        enabled = true
+
+        [settings.kernel]
+        lockdown = "integrity"
+      blockDeviceMappings:
+        - deviceName: /dev/xvda
+          ebs:
+            volumeSize: 2Gi
+            volumeType: gp3
+            encrypted: true
+            kmsKeyID: "arn:aws:kms:eu-west-1:XXXXXXXXXXXXX:key/XXXXXXXXXXXXXXXXXXXXXXXX"
+            deleteOnTermination: true
+        - deviceName: /dev/xvdb
+          ebs:
+            volumeSize: 50Gi
+            volumeType: gp3
+            encrypted: true
+            kmsKeyID: "arn:aws:kms:eu-west-1:XXXXXXXXXXXXX:key/XXXXXXXXXXXXXXXXXXXXXXXX"
+            deleteOnTermination: true
+      tags:
+        ManagedBy: karpenter
+        karpenter.sh/discovery: main_cluster
+      metadataOptions:
+        httpEndpoint: enabled
+        httpProtocolIPv6: disabled
+        httpPutResponseHopLimit: 2
+        httpTokens: required

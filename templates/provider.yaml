@@ -1,0 +1,44 @@
+{{- if .Values.providers -}}
+{{- range .Values.providers.items }}
+---
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: {{ .name }}
+spec:
+  {{ if .providerRef }}
+  providerRef:
+    {{- with .providerRef }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .provider }}
+  provider:
+    {{- with .provider }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  limits:
+    {{- with .limits }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  labels:
+    {{- with .labels }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  requirements:
+    {{- with .requirements }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  taints:
+    {{- with .taints }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{ if .ttlSecondsAfterEmpty }}
+  ttlSecondsAfterEmpty: {{ .ttlSecondsAfterEmpty }}
+  {{- end }}
+  {{ if .ttlSecondsUntilExpired }}
+  ttlSecondsUntilExpired: {{ .ttlSecondsUntilExpired }}
+  {{- end }}
+{{- end }}
+{{- end -}}

@@ -1,0 +1,56 @@
+{{- if .Values.awsNodeTemplate -}}
+{{- range .Values.awsNodeTemplate.items }}
+---
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: {{ .name }}
+spec:
+  {{ if .instanceProfile }}
+  instanceProfile: {{ .instanceProfile }}
+  {{- end }}
+  {{ if .blockDeviceMappings }}
+  blockDeviceMappings:
+    {{- with .blockDeviceMappings }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .securityGroupSelector }}
+  subnetSelector:
+    {{- with .subnetSelector }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .securityGroupSelector }}
+  securityGroupSelector:
+    {{- with .securityGroupSelector }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .userData }}
+  userData: |
+{{ .userData | indent 4 }}
+  {{- end }}
+  {{ if .amiFamily }}
+  amiFamily: {{ .amiFamily }}
+  {{- end }}
+  {{ if .amiSelector }}
+  amiSelector:
+     {{- with .amiSelector }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .metadataOptions }}
+  metadataOptions:
+     {{- with .metadataOptions }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{ if .tags }}
+  tags:
+    {{- with .tags }}
+      {{- . | toYaml | trim | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end -}}
